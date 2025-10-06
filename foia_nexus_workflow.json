@@ -1,0 +1,151 @@
+{
+  "metadata": {
+    "title": "FOIA Nexus Workflow",
+    "version": "2025.10.01",
+    "description": "Governance-to-automation relationships across FOIA Nexus subsystems",
+    "legend": {
+      "importance": "1 (supporting) … 5 (mission critical)",
+      "confidence": "0.0 (manual/untested) … 1.0 (fully automated & validated)"
+    }
+  },
+  "nodes": [
+    {
+      "id": "FOIA_Master_Reconciled_2025",
+      "label": "FOIA Master Reconciled 2025",
+      "category": "Data",
+      "importance": 5,
+      "description": "Canonical, reconciled record spine feeding automation and dashboards."
+    },
+    {
+      "id": "FOIA_PDF_Intake",
+      "label": "FOIA PDF Intake",
+      "category": "Data",
+      "importance": 4,
+      "description": "Extracts PDF content, performs exemption pre-tagging."
+    },
+    {
+      "id": "Agency_Contacts",
+      "label": "Agency Contacts Registry",
+      "category": "Data",
+      "importance": 3,
+      "description": "Verified agency metadata, routing rules, escalation paths."
+    },
+    {
+      "id": "Colab_Integrator",
+      "label": "Colab Integrator",
+      "category": "Automation",
+      "importance": 4,
+      "description": "Colab pipeline that merges inputs, normalizes, and exports structured feeds."
+    },
+    {
+      "id": "GAS_BatchOps",
+      "label": "GAS BatchOps",
+      "category": "Automation",
+      "importance": 4,
+      "description": "V8 batch write-back engine for Sheets + Drive updates."
+    },
+    {
+      "id": "Installable_Trigger",
+      "label": "Installable Trigger",
+      "category": "Automation",
+      "importance": 3,
+      "description": "Authorized time-based trigger orchestrating nightly runs."
+    },
+    {
+      "id": "LangChain_ExemptionTagger",
+      "label": "LangChain Exemption Tagger",
+      "category": "AI & Compliance",
+      "importance": 4,
+      "description": "LLM-assisted classifier for FOIA exemption labeling."
+    },
+    {
+      "id": "FOIA_Audit_Logger",
+      "label": "FOIA Audit Logger",
+      "category": "AI & Compliance",
+      "importance": 5,
+      "description": "Timestamped activity ledger with token validation for chain-of-custody."
+    },
+    {
+      "id": "Transparency_Dashboard",
+      "label": "Transparency Dashboard",
+      "category": "Visualization",
+      "importance": 4,
+      "description": "React/D3 force graph showing routing, backlog, and SLA health."
+    },
+    {
+      "id": "Workflow_Audit_Report",
+      "label": "Workflow Audit Report",
+      "category": "Visualization",
+      "importance": 3,
+      "description": "Automated semiannual compliance PDF with metrics and anomalies."
+    }
+  ],
+  "edges": [
+    {
+      "source": "FOIA_PDF_Intake",
+      "target": "LangChain_ExemptionTagger",
+      "confidence": 0.9,
+      "relationship": "Pass extracted text for exemption classification."
+    },
+    {
+      "source": "LangChain_ExemptionTagger",
+      "target": "Colab_Integrator",
+      "confidence": 0.85,
+      "relationship": "Supply tagged records for downstream normalization."
+    },
+    {
+      "source": "Agency_Contacts",
+      "target": "Colab_Integrator",
+      "confidence": 0.75,
+      "relationship": "Provide routing metadata during merges."
+    },
+    {
+      "source": "Colab_Integrator",
+      "target": "FOIA_Master_Reconciled_2025",
+      "confidence": 1.0,
+      "relationship": "Publish reconciled dataset to the canonical spine."
+    },
+    {
+      "source": "Installable_Trigger",
+      "target": "GAS_BatchOps",
+      "confidence": 0.8,
+      "relationship": "Schedule and authorize nightly batch execution."
+    },
+    {
+      "source": "Colab_Integrator",
+      "target": "GAS_BatchOps",
+      "confidence": 0.7,
+      "relationship": "Hand off normalized payloads for in-sheet updates."
+    },
+    {
+      "source": "GAS_BatchOps",
+      "target": "FOIA_Master_Reconciled_2025",
+      "confidence": 0.95,
+      "relationship": "Apply batch write-backs and PDF report generation."
+    },
+    {
+      "source": "GAS_BatchOps",
+      "target": "FOIA_Audit_Logger",
+      "confidence": 0.85,
+      "relationship": "Emit execution telemetry and token signatures."
+    },
+    {
+      "source": "FOIA_Master_Reconciled_2025",
+      "target": "Transparency_Dashboard",
+      "confidence": 0.8,
+      "relationship": "Serve data extracts for visualization refresh."
+    },
+    {
+      "source": "FOIA_Audit_Logger",
+      "target": "Workflow_Audit_Report",
+      "confidence": 0.8,
+      "relationship": "Feed compliance events into semiannual report."
+    },
+    {
+      "source": "FOIA_Master_Reconciled_2025",
+      "target": "Workflow_Audit_Report",
+      "confidence": 0.7,
+      "relationship": "Provide quantitative KPIs for reporting."
+    }
+  ]
+}
