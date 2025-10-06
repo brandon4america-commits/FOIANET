@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FOIA Nexus Workflow Map</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        background: #0f172a;
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      header,
+      footer {
+        padding: 1.5rem clamp(1.5rem, 2.5vw, 3rem);
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+      footer {
+        border-bottom: none;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+        font-size: 0.875rem;
+        margin-top: auto;
+      }
+      main {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        padding: clamp(1rem, 3vw, 3rem);
+      }
+      svg {
+        width: min(960px, 100%);
+        height: 640px;
+        background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.12), rgba(15, 23, 42, 0.9));
+        border-radius: 16px;
+        box-shadow: 0 30px 60px rgba(15, 23, 42, 0.6);
+      }
+      .node-label {
+        fill: #f8fafc;
+        pointer-events: none;
+        paint-order: stroke;
+        stroke: rgba(15, 23, 42, 0.85);
+        stroke-width: 3px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem clamp(1rem, 2vw, 2.5rem);
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        color: #cbd5f5;
+      }
+      .legend-group {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+      .legend-swatch {
+        width: 1rem;
+        height: 1rem;
+        border-radius: 0.35rem;
+      }
+      a {
+        color: #60a5fa;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 style="margin: 0; font-size: clamp(1.6rem, 2.4vw, 2.4rem); font-weight: 700;">
+        FOIA Nexus Workflow Map
+      </h1>
+      <p style="margin: 0.5rem 0 0; max-width: 680px; color: #cbd5f5;">
+        Force-directed visualization of FOIA Nexus subsystems. Node size reflects strategic importance;
+        link thickness indicates automation confidence.
+      </p>
+      <div class="legend" aria-label="Legend">
+        <div class="legend-group"><span class="legend-swatch" style="background:#2D9CDB"></span>Data</div>
+        <div class="legend-group"><span class="legend-swatch" style="background:#27AE60"></span>Automation</div>
+        <div class="legend-group"><span class="legend-swatch" style="background:#F2994A"></span>AI &amp; Compliance</div>
+        <div class="legend-group"><span class="legend-swatch" style="background:#BB6BD9"></span>Visualization</div>
+      </div>
+    </header>
+    <main>
+      <svg role="img" aria-label="FOIA Nexus workflow force-directed graph"></svg>
+    </main>
+    <footer>
+      <strong>Usage.</strong> Host this HTML file alongside
+      <code>foia_nexus_workflow.json</code> or update the fetch path below to point at your API/storage bucket.
+    </footer>
+    <script src="https://d3js.org/d3.v7.min.js" integrity="sha384-x7kDn8ApX2HFqRSbuuSSMzdg3NofM8JrIoVNewc19hXtOD87mpy4V/mQJu1nvLK8" crossorigin="anonymous"></script>
+    <script>
+      const colorScale = {
+        Data: "#2D9CDB",
+        Automation: "#27AE60",
+        "AI & Compliance": "#F2994A",
+        Visualization: "#BB6BD9"
+      };
+
+      async function render() {
+        const response = await fetch("foia_nexus_workflow.json");
+        if (!response.ok) {
+          throw new Error(`Failed to load workflow data: ${response.status}`);
+        }
+        const graph = await response.json();
+
+        const width = 960;
+        const height = 640;
+        const svg = d3.select("svg");
+
+        const simulation = d3
+          .forceSimulation(graph.nodes)
+          .force(
+            "link",
+            d3
+              .forceLink(graph.edges)
+              .id((d) => d.id)
+              .distance(140)
+              .strength((d) => Math.max(0.1, d.confidence))
+          )
+          .force("charge", d3.forceManyBody().strength(-320))
+          .force("center", d3.forceCenter(width / 2, height / 2))
+          .force("collision", d3.forceCollide().radius((d) => 12 + d.importance * 2));
+
+        const link = svg
+          .append("g")
+          .attr("stroke", "#60a5fa")
+          .attr("stroke-opacity", 0.45)
+          .selectAll("line")
+          .data(graph.edges)
+          .join("line")
+          .attr("stroke-width", (d) => 1.5 + d.confidence * 4);
+
+        link
+          .append("title")
+          .text((d) => `${d.source} → ${d.target}\nConfidence: ${d.confidence}\n${d.relationship}`);
+
+        const nodeGroup = svg
+          .append("g")
+          .attr("stroke", "#0f172a")
+          .attr("stroke-width", 1.5)
+          .selectAll("circle")
+          .data(graph.nodes)
+          .join("circle")
+          .attr("r", (d) => 6 + d.importance * 2)
+          .attr("fill", (d) => colorScale[d.category] || "#94a3b8")
+          .call(
+            d3
+              .drag()
+              .on("start", (event, d) => {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+              })
+              .on("drag", (event, d) => {
+                d.fx = event.x;
+                d.fy = event.y;
+              })
+              .on("end", (event, d) => {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+              })
+          );
+
+        nodeGroup.append("title").text((d) => `${d.label}\nImportance: ${d.importance}\n${d.description}`);
+
+        const labels = svg
+          .append("g")
+          .selectAll("text")
+          .data(graph.nodes)
+          .join("text")
+          .attr("class", "node-label")
+          .attr("font-size", (d) => 10 + d.importance)
+          .text((d) => d.label);
+
+        simulation.on("tick", () => {
+          link
+            .attr("x1", (d) => d.source.x)
+            .attr("y1", (d) => d.source.y)
+            .attr("x2", (d) => d.target.x)
+            .attr("y2", (d) => d.target.y);
+
+          nodeGroup.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+
+          labels.attr("x", (d) => d.x + 12).attr("y", (d) => d.y + 4);
+        });
+      }
+
+      render().catch((error) => {
+        console.error(error);
+        const main = document.querySelector("main");
+        main.innerHTML = `<p style="max-width:480px;text-align:center;">⚠️ Unable to load workflow data. Ensure <code>foia_nexus_workflow.json</code> is hosted alongside this file or update the fetch path.</p>`;
+      });
+    </script>
+  </body>
+</html>
