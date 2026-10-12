@@ -1,0 +1,199 @@
+{
+  "metadata": {
+    "title": "FOIA Intelligence Framework",
+    "version": "0.1",
+    "generated": "2025-10-07",
+    "description": "Nodes and edges describing the automated, auditable FOIA intelligence workflow."
+  },
+  "layers": [
+    {
+      "name": "Data",
+      "color": "#1f77b4"
+    },
+    {
+      "name": "Automation",
+      "color": "#2ca02c"
+    },
+    {
+      "name": "Compliance",
+      "color": "#d62728"
+    },
+    {
+      "name": "Intelligence",
+      "color": "#9467bd"
+    },
+    {
+      "name": "Experience",
+      "color": "#8c564b"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "source_registry",
+      "label": "FOIA Sources Registry",
+      "layer": "Data",
+      "type": "data_catalog",
+      "attributes": {
+        "inputs": ["FOIA.gov API", "Agency CSV exports", "Historical PDFs"],
+        "refresh_cadence": "nightly",
+        "owner": "Data Steward"
+      }
+    },
+    {
+      "id": "ingest_normalize",
+      "label": "Canonical Ingestion",
+      "layer": "Automation",
+      "type": "pipeline",
+      "attributes": {
+        "runtime": "Google Apps Script trigger -> Colab",
+        "artifacts": ["normalized_requests.parquet", "request_pdf_text.jsonl"],
+        "logging": "Stackdriver" 
+      }
+    },
+    {
+      "id": "entity_resolution",
+      "label": "Entity Resolution & QA",
+      "layer": "Intelligence",
+      "type": "processing",
+      "attributes": {
+        "techniques": ["dedupe", "LLM-assisted alias reconciliation"],
+        "confidence_scoring": true,
+        "qa_samples_per_run": 25
+      }
+    },
+    {
+      "id": "compliance_monitor",
+      "label": "Compliance Monitor",
+      "layer": "Compliance",
+      "type": "control",
+      "attributes": {
+        "checks": ["trigger scopes", "PII redaction", "audit trail"],
+        "frequency": "monthly",
+        "report": "workflow_audit_log.csv"
+      }
+    },
+    {
+      "id": "foia_graph",
+      "label": "FOIA Nexus Graph",
+      "layer": "Intelligence",
+      "type": "graph_dataset",
+      "attributes": {
+        "file": "foia_graph.json",
+        "metrics": ["median_response_days", "appeal_rate", "exemption_usage_rate"],
+        "visualization": "Force-directed (D3/Observable)"
+      }
+    },
+    {
+      "id": "dashboard_refresh",
+      "label": "Transparency Dashboard Build",
+      "layer": "Experience",
+      "type": "build_step",
+      "attributes": {
+        "framework": "React / Streamlit",
+        "data_inputs": ["foia_graph.json", "agency_metrics.json"],
+        "cache_policy": "static JSON (no PII)"
+      }
+    },
+    {
+      "id": "notification_hub",
+      "label": "Stakeholder Notification Hub",
+      "layer": "Automation",
+      "type": "messaging",
+      "attributes": {
+        "channels": ["Email", "Slack"],
+        "content": ["daily delta summary", "PDF response time report"],
+        "source": "Apps Script Gmail API"
+      }
+    },
+    {
+      "id": "predictive_models",
+      "label": "Predictive Analytics",
+      "layer": "Intelligence",
+      "type": "model",
+      "attributes": {
+        "models": ["response_time_regression.pkl", "appeal_likelihood_classifier.pkl"],
+        "training_cadence": "quarterly",
+        "explainability": "SHAP summaries"
+      }
+    },
+    {
+      "id": "audit_data_vault",
+      "label": "Audit Data Vault",
+      "layer": "Compliance",
+      "type": "storage",
+      "attributes": {
+        "artifacts": ["run_manifests", "exemption_tags.json", "pdf_redaction_map.csv"],
+        "retention": "7 years",
+        "access": "read-only to auditors"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "source_registry",
+      "target": "ingest_normalize",
+      "relationship": "feeds",
+      "notes": "Nightly trigger ingests new FOIA responses and metadata."
+    },
+    {
+      "source": "ingest_normalize",
+      "target": "entity_resolution",
+      "relationship": "produces",
+      "notes": "Normalized records enriched with requester and agency entities."
+    },
+    {
+      "source": "entity_resolution",
+      "target": "foia_graph",
+      "relationship": "publishes",
+      "notes": "Generates graph nodes/edges with performance metrics."
+    },
+    {
+      "source": "entity_resolution",
+      "target": "predictive_models",
+      "relationship": "trains",
+      "notes": "Feature store for predictive analytics."
+    },
+    {
+      "source": "ingest_normalize",
+      "target": "compliance_monitor",
+      "relationship": "logs_to",
+      "notes": "Every run produces manifest + scope check record."
+    },
+    {
+      "source": "compliance_monitor",
+      "target": "audit_data_vault",
+      "relationship": "archives",
+      "notes": "Compliance findings stored for auditability."
+    },
+    {
+      "source": "foia_graph",
+      "target": "dashboard_refresh",
+      "relationship": "supplies",
+      "notes": "Graph JSON drives agency performance visualizations."
+    },
+    {
+      "source": "predictive_models",
+      "target": "dashboard_refresh",
+      "relationship": "augments",
+      "notes": "Forecast outputs surface in transparency dashboard widgets."
+    },
+    {
+      "source": "dashboard_refresh",
+      "target": "notification_hub",
+      "relationship": "summarizes",
+      "notes": "Daily change summary and PDF packs distributed to stakeholders."
+    },
+    {
+      "source": "ingest_normalize",
+      "target": "audit_data_vault",
+      "relationship": "writes",
+      "notes": "Source data snapshots stored for reproducibility."
+    },
+    {
+      "source": "predictive_models",
+      "target": "compliance_monitor",
+      "relationship": "reports",
+      "notes": "Model governance metrics delivered to compliance layer."
+    }
+  ]
+}
